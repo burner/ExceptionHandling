@@ -1,0 +1,9 @@
+{
+	"name": "exceptionhandling",
+	"authors": [
+		"burner"
+	],
+	"description": "Functions to make exception and assertion handling easier.",
+	"copyright": "Copyright © 2016, burner",
+	"license": "LGPL3"
+}
