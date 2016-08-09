@@ -52,20 +52,22 @@ private ref T AssertImpl(T,alias Cmp)(auto ref T toTest, auto ref T toCompareAga
 		alias ExceptionType = Exception;
 	}
 
+	bool cmpRslt = false;
 	try {
-		auto cmpRslt = Cmp(toTest, toCompareAgainst);
-		if(!cmpRslt) {
-			throw new ExceptionType(format("toTest(%s) != toCompareAgainst(%s)",
-				toTest, toCompareAgainst), file, line
-			);
-		}
-		return toTest;
+		cmpRslt = Cmp(toTest, toCompareAgainst);
 	} catch(ExceptionType e) {
 		throw new ExceptionType(
 			format("Exception thrown while \"toTest(%s) != toCompareAgainst(%s)\"",
 			toTest, toCompareAgainst), file, line, e
 		);
 	}
+
+	if(!cmpRslt) {
+		throw new ExceptionType(format("toTest(%s) != toCompareAgainst(%s)",
+			toTest, toCompareAgainst), file, line
+		);
+	}
+	return toTest;
 }
 
 unittest {
