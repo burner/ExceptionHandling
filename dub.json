@@ -3,7 +3,7 @@
 	"authors": [
 		"burner"
 	],
-	"description": "Functions to make exception and assertion handling easier.",
+	"description": "Functions to make exception and assertion handling in D easier.",
 	"copyright": "Copyright © 2016, burner",
 	"license": "LGPL3"
 }
