@@ -1,8 +1,11 @@
 import std.stdio;
 import exceptionhandling;
+import std.exception : assertThrown;
 
 void main()
 {
-	chain(AssertEqual(1.0, 0.0), "WTF");
+	assertThrown!Exception(
+		chain(assertEqual(1.0, 0.0), "WTF")
+	);
 	bool value = expect(true);
 }

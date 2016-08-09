@@ -19,7 +19,7 @@ private {
 	}
 }
 
-ref T AssertEqual(T)(auto ref T toTest, auto ref T toCompareAgainst, 
+ref T assertEqual(T)(auto ref T toTest, auto ref T toCompareAgainst, 
 		const string file = __FILE__, const int line = __LINE__) 
 {
 	import std.traits : isFloatingPoint;
@@ -30,7 +30,7 @@ ref T AssertEqual(T)(auto ref T toTest, auto ref T toCompareAgainst,
 	}
 }
 
-ref T AssertNotEqual(T)(auto ref T toTest, auto ref T toCompareAgainst, 
+ref T assertNotEqual(T)(auto ref T toTest, auto ref T toCompareAgainst, 
 		const string file = __FILE__, const int line = __LINE__) 
 {
 	import std.traits : isFloatingPoint;
@@ -73,9 +73,9 @@ private ref T AssertImpl(T,alias Cmp)(auto ref T toTest, auto ref T toCompareAga
 unittest {
 	import core.exception : AssertError;
 	import std.exception : assertThrown;
-	AssertEqual(1.0, 1.0);
+	assertEqual(1.0, 1.0);
 
-	assertThrown!AssertError(AssertEqual(1.0, 0.0));
+	assertThrown!AssertError(assertEqual(1.0, 0.0));
 }
 
 auto chain(ET = Exception, F, int line = __LINE__, string file = __FILE__, Args...)
