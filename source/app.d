@@ -4,4 +4,5 @@ import exceptionhandling;
 void main()
 {
 	chain(AssertEqual(1.0, 0.0), "WTF");
+	bool value = expect(true);
 }

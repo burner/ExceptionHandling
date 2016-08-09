@@ -1,27 +1,69 @@
 module exceptionhandling;
 
-void AssertEqual(T)(auto ref T toTest, auto ref T toCompareAgainst, 
+private {
+	import std.math : approxEqual;
+	bool cmpFloat(T)(T tt, T tc) {
+		return approxEqual(tt, tc);
+	}
+
+	bool cmpFloatNot(T)(T tt, T tc) {
+		return !approxEqual(tt, tc);
+	}
+
+	bool cmpRest(T)(T tt, T tc) {
+		return tt == tc;
+	}
+
+	bool cmpRestNot(T)(T tt, T tc) {
+		return tt == tc;
+	}
+}
+
+ref T AssertEqual(T)(auto ref T toTest, auto ref T toCompareAgainst, 
 		const string file = __FILE__, const int line = __LINE__) 
 {
+	import std.traits : isFloatingPoint;
+	static if(isFloatingPoint!T) {
+		return AssertImpl!(T, cmpFloat)(toTest, toCompareAgainst, file, line);
+	} else {
+		return AssertImpl!(T, cmp)(toTest, toCompareAgainst, file, line);
+	}
+}
+
+ref T AssertNotEqual(T)(auto ref T toTest, auto ref T toCompareAgainst, 
+		const string file = __FILE__, const int line = __LINE__) 
+{
+	import std.traits : isFloatingPoint;
+	static if(isFloatingPoint!T) {
+		return AssertImpl!(T, cmpFloatNot)(toTest, toCompareAgainst, file, line);
+	} else {
+		return AssertImpl!(T, cmpNot)(toTest, toCompareAgainst, file, line);
+	}
+}
+
+private ref T AssertImpl(T,alias Cmp)(auto ref T toTest, auto ref T toCompareAgainst, 
+		const string file, const int line) 
+{
+	import std.format : format;
 	version(unittest) {
 		import core.exception : AssertError;
 		alias ExceptionType = AssertError;
 	} else {
 		alias ExceptionType = Exception;
 	}
-	import std.traits : isFloatingPoint;
 
-	static if(isFloatingPoint!T) {
-		import std.math : approxEqual;
-		bool cmpRslt = approxEqual(toTest, toCompareAgainst);
-	} else {
-		bool cmpRslt = toTest == toCompareAgainst;
-	}
-
-	if(!cmpRslt) {
-		import std.format : format;
-		throw new ExceptionType(format("toTest(%s) != toCompareAgainst(%s)",
-			toTest, toCompareAgainst), file, line
+	try {
+		auto cmpRslt = Cmp(toTest, toCompareAgainst);
+		if(!cmpRslt) {
+			throw new ExceptionType(format("toTest(%s) != toCompareAgainst(%s)",
+				toTest, toCompareAgainst), file, line
+			);
+		}
+		return toTest;
+	} catch(ExceptionType e) {
+		throw new ExceptionType(
+			format("Exception thrown while \"toTest(%s) != toCompareAgainst(%s)\"",
+			toTest, toCompareAgainst), file, line, e
 		);
 	}
 }
@@ -44,11 +86,13 @@ auto chain(ET = Exception, F, int line = __LINE__, string file = __FILE__, Args.
 	}
 }
 
-void expect(ET = Exception, F, int line = __LINE__, string file = __FILE__, Args...)
+auto expect(ET = Exception, F, int line = __LINE__, string file = __FILE__, Args...)
 		(lazy F exp, lazy Args args)
 {
-	if(!exp) {
-		throw new ET(joinElem(args), file, line);
+	try {
+		return exp();
+	} catch(Exception e) {
+		throw new ET(joinElem(args), file, line, e);
 	}
 }
 
