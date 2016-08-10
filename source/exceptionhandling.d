@@ -19,6 +19,12 @@ private {
 	}
 }
 
+/** Assert that `toTest` is equal to `toCompareAgainst`.
+If `T` is a floating point `approxEqual` is used to compare the values.
+`toTest` is returned if the comparision is correct.
+If the comparision is incorrect an Exception is thrown. If assertEqual is used
+in a unittest block an AssertError is thrown an Exception otherwise.
+*/
 ref T assertEqual(T)(auto ref T toTest, auto ref T toCompareAgainst, 
 		const string file = __FILE__, const int line = __LINE__) 
 {
@@ -30,6 +36,7 @@ ref T assertEqual(T)(auto ref T toTest, auto ref T toCompareAgainst,
 	}
 }
 
+/// ditto
 ref T assertNotEqual(T)(auto ref T toTest, auto ref T toCompareAgainst, 
 		const string file = __FILE__, const int line = __LINE__) 
 {
@@ -78,6 +85,11 @@ unittest {
 	assertThrown!AssertError(assertEqual(1.0, 0.0));
 }
 
+/** Calls `exp` if `exp` does not throw the return value from `exp` is
+returned, if `exp` throws the Exception is cought, a new Exception is
+constructed with a message made of `args` space seperated and the previously
+cought exception is nested in the newly created exception.
+*/
 auto chain(ET = Exception, F, int line = __LINE__, string file = __FILE__, Args...)
 		(lazy F exp, lazy Args args)
 {
