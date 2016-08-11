@@ -10,11 +10,11 @@ private {
 		return !approxEqual(tt, tc);
 	}
 
-	bool cmpRest(T)(T tt, T tc) {
-		return tt == tc;
+	bool cmpNot(T)(T tt, T tc) {
+		return tt != tc;
 	}
 
-	bool cmpRestNot(T)(T tt, T tc) {
+	bool cmp(T)(T tt, T tc) {
 		return tt == tc;
 	}
 }
@@ -80,9 +80,31 @@ private ref T AssertImpl(T,alias Cmp)(auto ref T toTest, auto ref T toCompareAga
 unittest {
 	import core.exception : AssertError;
 	import std.exception : assertThrown;
-	assertEqual(1.0, 1.0);
+	cast(void)assertEqual(1.0, 1.0);
+	cast(void)assertNotEqual(1.0, 0.0);
 
 	assertThrown!AssertError(assertEqual(1.0, 0.0));
+
+	cast(void)assertEqual(1, 1);
+	cast(void)assertNotEqual(1, 0);
+}
+
+unittest {
+	import core.exception : AssertError;
+	import std.exception : assertThrown;
+
+	class Foo {
+		int a;
+		this(int a) { this.a = a; }
+		override bool opEquals(Object o) {
+			Foo f = cast(Foo)o;
+			return f.a == this.a;
+		}
+	}
+
+	auto f = new Foo(1);
+
+	assertThrown!AssertError(assertEqual(f, null));
 }
 
 /** Calls `exp` if `exp` does not throw the return value from `exp` is
@@ -90,16 +112,6 @@ returned, if `exp` throws the Exception is cought, a new Exception is
 constructed with a message made of `args` space seperated and the previously
 cought exception is nested in the newly created exception.
 */
-auto chain(ET = Exception, F, int line = __LINE__, string file = __FILE__, Args...)
-		(lazy F exp, lazy Args args)
-{
-	try {
-		return exp();
-	} catch(Exception e) {
-		throw new ET(joinElem(args), file, line, e);
-	}
-}
-
 auto expect(ET = Exception, F, int line = __LINE__, string file = __FILE__, Args...)
 		(lazy F exp, lazy Args args)
 {
@@ -119,4 +131,30 @@ private string joinElem(Args...)(lazy Args args) {
 		formattedWrite(app, "%s ", arg);
 	}
 	return app.data;
+}
+
+unittest {
+	import std.string : indexOf;
+	string barMsg = "Fun will thrown, I'm sure";
+	string funMsg = "Hopefully this is true";
+
+	void fun() {
+		throw new Exception(funMsg);
+	}
+
+	void bar() {
+		expect(fun(), barMsg);
+	}
+
+	bool didThrow = false;
+	try {
+		bar();
+	} catch(Exception e) {
+		assert(e.msg.indexOf(barMsg) != -1, "\"" ~ e.msg ~ "\" " ~ barMsg);
+		assert(e.next !is null);
+		assert(e.next.msg.indexOf(funMsg) != -1, e.next.msg);
+		didThrow = true;
+	}
+
+	assert(didThrow);
 }
