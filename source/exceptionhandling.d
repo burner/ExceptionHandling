@@ -1,5 +1,11 @@
 module exceptionhandling;
 
+/**
+   version(exceptionhandling_release_asserts)
+   
+   releases all assertXXXXs
+*/
+
 private {
 	version(unittest) {
 		import core.exception : AssertError;
@@ -151,23 +157,28 @@ private auto ref T AssertImpl(T,S,alias Cmp, string cmpMsg)(auto ref T toTest,
 {
 	import std.format : format;
 
-	bool cmpRslt = false;
-	try {
-		cmpRslt = Cmp(toTest, toCompareAgainst);
-	} catch(Exception e) {
-		throw new ExceptionType(
-			format("Exception thrown while \"toTest(%s) " ~ cmpMsg
-				~ " toCompareAgainst(%s)\"",
-			toTest, toCompareAgainst), file, line, e
-		);
-	}
+	version(exceptionhandling_release_asserts) {
+		return toTest;
+	} else {
+		bool cmpRslt = false;
+		try {
+			cmpRslt = Cmp(toTest, toCompareAgainst);
+		} catch(Exception e) {
+			throw new ExceptionType(
+				format("Exception thrown while \"toTest(%s) " ~ cmpMsg
+					~ " toCompareAgainst(%s)\"",
+				toTest, toCompareAgainst), file, line, e
+			);
+		}
 
-	if(!cmpRslt) {
-		throw new ExceptionType(format("toTest(%s) " ~ cmpMsg ~
-			" toCompareAgainst(%s) failed", toTest, toCompareAgainst), file, line
-		);
+		if(!cmpRslt) {
+			throw new ExceptionType(format("toTest(%s) " ~ cmpMsg ~
+				" toCompareAgainst(%s) failed", toTest, toCompareAgainst), file, 
+					line
+			);
+		}
+		return toTest;
 	}
-	return toTest;
 }
 
 unittest {
