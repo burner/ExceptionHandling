@@ -292,19 +292,23 @@ unittest {
 	assertThrown(assertEqual(func(), true));
 }
 
-auto ensure(ET = ExceptionType, E, int line = __LINE__,
+auto ref ensure(ET = ExceptionType, E, int line = __LINE__,
 		string file = __FILE__, Args...)(lazy E exp, Args args)
 {
+	typeof(exp) rslt;
+
 	try {
-		auto rslt = exp();
-		if(!rslt) {
-			throw new ExceptionType(joinElem("Ensure failed", args), file, line);
-		}
-		return rslt;
+		rslt = exp();
 	} catch(Exception e) {
 		throw new ExceptionType(
 			"Exception thrown will calling \"ensure\"", file, line, e
 		);
+	}
+
+	if(!rslt) {
+		throw new ExceptionType(joinElem("Ensure failed", args), file, line);
+	} else {
+		return rslt;
 	}
 }
 
