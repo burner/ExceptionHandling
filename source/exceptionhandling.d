@@ -56,6 +56,25 @@ private {
 	}
 }
 
+template getCMP(T, alias FCMP, alias ICMP) {
+	import std.traits : isFloatingPoint;
+	import std.range : ElementType, isInputRange;
+
+	static if(isInputRange!T) {
+		static if(isFloatingPoint!(ElementType!(T))) {
+			alias getCMP = FCMP;
+		} else {
+			alias getCMP = ICMP;
+		}
+	} else {
+		static if(isFloatingPoint!T) {
+			alias getCMP = FCMP;
+		} else {
+			alias getCMP = ICMP;
+		}
+	}
+}
+
 /** Assert that `toTest` is equal to `toCompareAgainst`.
 If `T` is a floating point `approxEqual` is used to compare the values.
 `toTest` is returned if the comparision is correct.
@@ -65,33 +84,20 @@ in a unittest block an AssertError is thrown an Exception otherwise.
 auto ref T assertEqual(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 		const string file = __FILE__, const int line = __LINE__)
 {
-	import std.traits : isFloatingPoint, isImplicitlyConvertible;
-	static assert(isImplicitlyConvertible!(T,S));
-
-	static if(isFloatingPoint!T) {
-		return AssertImpl!(T,S, cmpFloat, "==")(toTest, toCompareAgainst,
-				file, line
-		);
-	} else {
-		return AssertImpl!(T,S, cmp, "==")(toTest, toCompareAgainst, file, line);
-	}
+	alias CMP = getCMP!(T, cmpFloat, cmp);
+	return AssertImpl!(T,S, CMP, "==")(toTest, toCompareAgainst,
+			file, line
+	);
 }
 
 /// ditto
 auto ref T assertNotEqual(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 		const string file = __FILE__, const int line = __LINE__)
 {
-	import std.traits : isFloatingPoint, isImplicitlyConvertible;
-	static assert(isImplicitlyConvertible!(T,S));
-	static if(isFloatingPoint!T) {
-		return AssertImpl!(T,S, cmpFloatNot, "!=")(toTest, toCompareAgainst,
-				file, line
-		);
-	} else {
-		return AssertImpl!(T,S, cmpNot, "!=")(toTest, toCompareAgainst, file,
-				line
-		);
-	}
+	alias CMP = getCMP!(T,cmpFloatNot, cmpNot);
+	return AssertImpl!(T,S, CMP, "!=")(toTest, toCompareAgainst, file,
+			line
+	);
 }
 
 /// ditto
@@ -123,15 +129,10 @@ auto ref T assertGreaterEqual(T,S)(auto ref T toTest, auto ref S toCompareAgains
 	import std.traits : isFloatingPoint, isImplicitlyConvertible;
 	static assert(isImplicitlyConvertible!(T,S));
 
-	static if(isFloatingPoint!T) {
-		return AssertImpl!(T,S, cmpGreaterEqualFloat, ">=")(toTest,
-				toCompareAgainst, file, line
-		);
-	} else {
-		return AssertImpl!(T,S, cmpGreaterEqual, ">=")(toTest,
-				toCompareAgainst, file, line
-		);
-	}
+	alias CMP = getCMP!(T,cmpGreaterEqualFloat, cmpGreaterEqual);
+	return AssertImpl!(T,S, CMP, ">=")(toTest,
+			toCompareAgainst, file, line
+	);
 }
 
 /// ditto
@@ -141,28 +142,58 @@ auto ref T assertLessEqual(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 	import std.traits : isFloatingPoint, isImplicitlyConvertible;
 	static assert(isImplicitlyConvertible!(T,S));
 
-	static if(isFloatingPoint!T) {
-		return AssertImpl!(T,S, cmpLessEqualFloat, "<=")(toTest,
-				toCompareAgainst, file, line
-		);
-	} else {
-		return AssertImpl!(T,S, cmpLessEqual, "<=")(toTest,
-				toCompareAgainst, file, line
-		);
-	}
+	alias CMP = getCMP!(T,cmpLessEqualFloat, cmpLessEqual);
+	return AssertImpl!(T,S, CMP, "<=")(toTest,
+			toCompareAgainst, file, line
+	);
 }
 
 private auto ref T AssertImpl(T,S,alias Cmp, string cmpMsg)(auto ref T toTest,
 		auto ref S toCompareAgainst, const string file, const int line)
 {
 	import std.format : format;
+	import std.range : isForwardRange, isInputRange;
 
+	static assert(!isInputRange!T || isForwardRange!T);
 	version(exceptionhandling_release_asserts) {
 		return toTest;
 	} else {
 		bool cmpRslt = false;
 		try {
-			cmpRslt = Cmp(toTest, toCompareAgainst);
+			static if(isForwardRange!T) {
+				import std.algorithm.comparison : equal;
+				import std.traits : isImplicitlyConvertible;
+				import std.range.primitives : isInputRange, ElementType;
+				import std.functional : binaryFun;
+				import std.array : empty, front, popFront;
+				static assert(isImplicitlyConvertible!(
+						ElementType!(T),
+						ElementType!(S)),
+						format("You can not compare ranges of type %s to"
+							~ " ranges of type %s.", ElementType!(T).stringof,
+							ElementType!(S).stringof)
+				);
+				alias CMP = Cmp!(ElementType!T);
+				while(!toTest.empty && !toCompareAgainst.empty) {
+					if(!CMP(toTest.front, toCompareAgainst.front)) {
+						cmpRslt = false;
+						goto fail;
+					}
+					if(!toTest.empty && !toCompareAgainst.empty) {
+						toTest.popFront();
+						toCompareAgainst.popFront();
+					} 
+				}
+				if(toTest.empty != toCompareAgainst.empty) {
+					cmpRslt = false;
+					goto fail;
+				}
+				cmpRslt = true;
+				
+				fail:
+			} else {
+				cmpRslt = Cmp(toTest, toCompareAgainst);
+			}
 		} catch(Exception e) {
 			throw new ExceptionType(
 				format("Exception thrown while \"toTest(%s) " ~ cmpMsg
@@ -229,6 +260,18 @@ unittest {
 
 	assertThrown!AssertError(assertEqual(f, cast(Foo)null));
 	assertThrown!AssertError(assertEqual(f, g));
+	assertNotThrown!AssertError(assertEqual([0,1,2,3,4], [0,1,2,3,4]));
+	assertThrown!AssertError(assertEqual([0,2,3,4], [0,1,2,3,4]));
+	assertThrown!AssertError(assertEqual([0,2,3,4], [0,1,2]));
+	assertThrown!AssertError(assertEqual([0,1,2,3,5], [0,1,2,3,4]));
+	assertThrown!AssertError(assertEqual([0,1,2,3], [0,1,2,3,4]));
+
+	import std.container.array : Array;
+
+	auto ia = Array!int([0,1,2,3,4]);
+	assertNotThrown!AssertError(assertEqual(ia[], [0,1,2,3,4]));
+	assertThrown!AssertError(assertEqual(ia[], [0,1,2,3]));
+	assertThrown!AssertError(assertEqual(ia[], [0,1,2,3,4,5]));
 }
 
 /** Calls `exp` if `exp` does not throw the return value from `exp` is
@@ -292,6 +335,7 @@ unittest {
 	assertThrown(assertEqual(func(), true));
 }
 
+///
 auto ref ensure(ET = ExceptionType, E, int line = __LINE__,
 		string file = __FILE__, Args...)(lazy E exp, Args args)
 {
@@ -312,6 +356,7 @@ auto ref ensure(ET = ExceptionType, E, int line = __LINE__,
 	}
 }
 
+///
 unittest {
 	import core.exception : AssertError;
 	//import std.exception : assertThrown, assertNotThrown;
@@ -347,7 +392,23 @@ auto assertNotThrown(E,T)(lazy T t, int line = __LINE__,
 		return t();
 	} catch(E e) {
 		throw new ExceptionType("Exception of type " ~ E.stringof ~
-				" not caught unexceptionally", file, line
+				" caught unexceptionally", file, line
 		);
 	}
+}
+
+///
+unittest {
+	import core.exception : AssertError;
+	//import std.exception : assertThrown, assertNotThrown;
+	bool foo() {
+		throw new Exception("e");
+	}
+
+	bool bar() {
+		return true;
+	}
+
+	assertThrown!(AssertError)(assertThrown!(AssertError)(bar()));
+	assertThrown!(AssertError)(assertNotThrown!(Exception)(foo()));
 }
