@@ -84,68 +84,91 @@ in a unittest block an AssertError is thrown an Exception otherwise.
 auto ref T assertEqual(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 		const string file = __FILE__, const int line = __LINE__)
 {
-	alias CMP = getCMP!(T, cmpFloat, cmp);
-	return AssertImpl!(T,S, CMP, "==")(toTest, toCompareAgainst,
-			file, line
-	);
+	version(assert) {
+		alias CMP = getCMP!(T, cmpFloat, cmp);
+		return AssertImpl!(T,S, CMP, "==")(toTest, toCompareAgainst,
+				file, line
+		);
+	} else {
+		return toTest;
+	}
 }
 
 /// ditto
 auto ref T assertNotEqual(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 		const string file = __FILE__, const int line = __LINE__)
 {
-	alias CMP = getCMP!(T,cmpFloatNot, cmpNot);
-	return AssertImpl!(T,S, CMP, "!=")(toTest, toCompareAgainst, file,
-			line
-	);
+	version(assert) {
+		alias CMP = getCMP!(T,cmpFloatNot, cmpNot);
+		return AssertImpl!(T,S, CMP, "!=")(toTest, toCompareAgainst, file,
+				line
+		);
+	} else {
+		return toTest;
+	}
 }
 
 /// ditto
 auto ref T assertLess(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 		const string file = __FILE__, const int line = __LINE__)
 {
-	import std.traits : isFloatingPoint, isImplicitlyConvertible;
-	static assert(isImplicitlyConvertible!(T,S));
-	return AssertImpl!(T,S, cmpLess, "<")(toTest, toCompareAgainst,
-			file, line
-	);
+	version(assert) {
+		import std.traits : isFloatingPoint, isImplicitlyConvertible;
+		static assert(isImplicitlyConvertible!(T,S));
+		return AssertImpl!(T,S, cmpLess, "<")(toTest, toCompareAgainst,
+				file, line
+		);
+	} else {
+		return toTest;
+	}
 }
 
 /// ditto
 auto ref T assertGreater(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 		const string file = __FILE__, const int line = __LINE__)
 {
-	import std.traits : isFloatingPoint, isImplicitlyConvertible;
-	static assert(isImplicitlyConvertible!(T,S));
-	return AssertImpl!(T,S, cmpGreater, ">")(toTest, toCompareAgainst,
-			file, line
-	);
+	version(assert) {
+		import std.traits : isFloatingPoint, isImplicitlyConvertible;
+		static assert(isImplicitlyConvertible!(T,S));
+		return AssertImpl!(T,S, cmpGreater, ">")(toTest, toCompareAgainst,
+				file, line
+		);
+	} else {
+		return toTest;
+	}
 }
 
 /// ditto
 auto ref T assertGreaterEqual(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 		const string file = __FILE__, const int line = __LINE__)
 {
-	import std.traits : isFloatingPoint, isImplicitlyConvertible;
-	static assert(isImplicitlyConvertible!(T,S));
+	version(assert) {
+		import std.traits : isFloatingPoint, isImplicitlyConvertible;
+		static assert(isImplicitlyConvertible!(T,S));
 
-	alias CMP = getCMP!(T,cmpGreaterEqualFloat, cmpGreaterEqual);
-	return AssertImpl!(T,S, CMP, ">=")(toTest,
-			toCompareAgainst, file, line
-	);
+		alias CMP = getCMP!(T,cmpGreaterEqualFloat, cmpGreaterEqual);
+		return AssertImpl!(T,S, CMP, ">=")(toTest,
+				toCompareAgainst, file, line
+		);
+	} else {
+		return toTest;
+	}
 }
 
 /// ditto
 auto ref T assertLessEqual(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 		const string file = __FILE__, const int line = __LINE__)
 {
-	import std.traits : isFloatingPoint, isImplicitlyConvertible;
-	static assert(isImplicitlyConvertible!(T,S));
-
-	alias CMP = getCMP!(T,cmpLessEqualFloat, cmpLessEqual);
-	return AssertImpl!(T,S, CMP, "<=")(toTest,
-			toCompareAgainst, file, line
-	);
+	version(assert) {
+		import std.traits : isFloatingPoint, isImplicitlyConvertible;
+		static assert(isImplicitlyConvertible!(T,S));
+		alias CMP = getCMP!(T,cmpLessEqualFloat, cmpLessEqual);
+		return AssertImpl!(T,S, CMP, "<=")(toTest,
+				toCompareAgainst, file, line
+		);
+	} else {
+		return toTest;
+	}
 }
 
 private auto ref T AssertImpl(T,S,alias Cmp, string cmpMsg)(auto ref T toTest,
