@@ -23,27 +23,27 @@ private {
 		return !approxEqual(tt, tc);
 	}
 
-	bool cmpNot(T)(T tt, T tc) {
+	bool cmpNot(T,S)(T tt, S tc) {
 		return tt != tc;
 	}
 
-	bool cmp(T)(T tt, T tc) {
+	bool cmp(T,S)(T tt, S tc) {
 		return tt == tc;
 	}
 
-	bool cmpLess(T)(T tt, T tc) {
+	bool cmpLess(T,S)(T tt, S tc) {
 		return tt < tc;
 	}
 
-	bool cmpGreater(T)(T tt, T tc) {
+	bool cmpGreater(T,S)(T tt, S tc) {
 		return tt > tc;
 	}
 
-	bool cmpLessEqual(T)(T tt, T tc) {
+	bool cmpLessEqual(T,S)(T tt, S tc) {
 		return tt <= tc;
 	}
 
-	bool cmpGreaterEqual(T)(T tt, T tc) {
+	bool cmpGreaterEqual(T,S)(T tt, S tc) {
 		return tt >= tc;
 	}
 
@@ -113,8 +113,6 @@ auto ref T assertLess(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 		const string file = __FILE__, const int line = __LINE__)
 {
 	version(assert) {
-		import std.traits : isFloatingPoint, isImplicitlyConvertible;
-		static assert(isImplicitlyConvertible!(T,S));
 		return AssertImpl!(T,S, cmpLess, "<")(toTest, toCompareAgainst,
 				file, line
 		);
@@ -128,8 +126,6 @@ auto ref T assertGreater(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 		const string file = __FILE__, const int line = __LINE__)
 {
 	version(assert) {
-		import std.traits : isFloatingPoint, isImplicitlyConvertible;
-		static assert(isImplicitlyConvertible!(T,S));
 		return AssertImpl!(T,S, cmpGreater, ">")(toTest, toCompareAgainst,
 				file, line
 		);
@@ -143,9 +139,6 @@ auto ref T assertGreaterEqual(T,S)(auto ref T toTest, auto ref S toCompareAgains
 		const string file = __FILE__, const int line = __LINE__)
 {
 	version(assert) {
-		import std.traits : isFloatingPoint, isImplicitlyConvertible;
-		static assert(isImplicitlyConvertible!(T,S));
-
 		alias CMP = getCMP!(T,cmpGreaterEqualFloat, cmpGreaterEqual);
 		return AssertImpl!(T,S, CMP, ">=")(toTest,
 				toCompareAgainst, file, line
@@ -160,8 +153,6 @@ auto ref T assertLessEqual(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 		const string file = __FILE__, const int line = __LINE__)
 {
 	version(assert) {
-		import std.traits : isFloatingPoint, isImplicitlyConvertible;
-		static assert(isImplicitlyConvertible!(T,S));
 		alias CMP = getCMP!(T,cmpLessEqualFloat, cmpLessEqual);
 		return AssertImpl!(T,S, CMP, "<=")(toTest,
 				toCompareAgainst, file, line
@@ -183,7 +174,7 @@ private auto ref T AssertImpl(T,S,alias Cmp, string cmpMsg)(auto ref T toTest,
 	} else {
 		bool cmpRslt = false;
 		try {
-			static if(isForwardRange!T) {
+			static if(isForwardRange!T && isForwardRange!S) {
 				import std.algorithm.comparison : equal;
 				import std.traits : isImplicitlyConvertible;
 				import std.range.primitives : isInputRange, ElementType;
@@ -196,7 +187,7 @@ private auto ref T AssertImpl(T,S,alias Cmp, string cmpMsg)(auto ref T toTest,
 							~ " ranges of type %s.", ElementType!(T).stringof,
 							ElementType!(S).stringof)
 				);
-				alias CMP = Cmp!(ElementType!T);
+				alias CMP = Cmp!(ElementType!T,ElementType!S);
 				while(!toTest.empty && !toCompareAgainst.empty) {
 					if(!CMP(toTest.front, toCompareAgainst.front)) {
 						cmpRslt = false;
@@ -366,14 +357,14 @@ auto ref ensure(ET = ExceptionType, E, int line = __LINE__,
 
 	try {
 		rslt = exp();
-	} catch(Exception e) {
-		throw new ExceptionType(
+	} catch(Throwable e) {
+		throw new Exception(
 			"Exception thrown will calling \"ensure\"", file, line, e
 		);
 	}
 
 	if(!rslt) {
-		throw new ExceptionType(joinElem("Ensure failed", args), file, line);
+		throw new Exception(joinElem("Ensure failed", args), file, line);
 	} else {
 		return rslt;
 	}
@@ -387,11 +378,11 @@ unittest {
 		throw new Exception("e");
 	}
 
-	auto e = assertThrown!AssertError(ensure(func()));
+	auto e = assertThrown!Exception(ensure(func()));
 	assert(e.line == __LINE__ - 1);
-	auto e2 = assertThrown!AssertError(ensure(false));
+	auto e2 = assertThrown!Exception(ensure(false));
 	assert(e2.line == __LINE__ - 1);
-	bool b = assertNotThrown!AssertError(ensure(true));
+	bool b = assertNotThrown!Exception(ensure(true));
 	assert(b);
 }
 
@@ -434,4 +425,42 @@ unittest {
 
 	assertThrown!(AssertError)(assertThrown!(AssertError)(bar()));
 	assertThrown!(AssertError)(assertNotThrown!(Exception)(foo()));
+}
+
+unittest {
+	struct C {
+		int a;
+
+		bool opEquals(int other) const {
+			return this.a == other;
+		}
+
+		bool opEquals(C other) const {
+			return this.a == other.a;
+		}
+
+		int opCmp(int other) const {
+			return this.a < other ? -1 : this.a > other ? 1 : 0;
+		}
+
+		int opCmp(C other) const {
+			return this.a < other.a ? -1 : this.a > other.a ? 1 : 0;
+		}
+	}
+
+	assertEqual(C(10), 10);
+	assertLess(C(7), 9);
+	assertGreater(C(10), 9);
+	assertLessEqual(C(7), 9);
+	assertGreaterEqual(C(10), 9);
+	assertLessEqual(C(7), 7);
+	assertGreaterEqual(C(10), 10);
+
+	assertEqual(C(10), C(10));
+	assertLess(C(7), C(9));
+	assertGreater(C(10), C(9));
+	assertLessEqual(C(7), C(9));
+	assertGreaterEqual(C(10), C(9));
+	assertLessEqual(C(7), C(7));
+	assertGreaterEqual(C(10), C(10));
 }
