@@ -81,88 +81,76 @@ If `T` is a floating point `approxEqual` is used to compare the values.
 If the comparision is incorrect an Exception is thrown. If assertEqual is used
 in a unittest block an AssertError is thrown an Exception otherwise.
 */
-auto ref T assertEqual(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
+void assertEqual(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 		const string file = __FILE__, const int line = __LINE__)
 {
 	version(assert) {
 		alias CMP = getCMP!(T, cmpFloat, cmp);
-		return AssertImpl!(T,S, CMP, "==")(toTest, toCompareAgainst,
+		AssertImpl!(CMP, "==")(toTest, toCompareAgainst,
 				file, line
 		);
-	} else {
-		return toTest;
 	}
 }
 
 /// ditto
-auto ref T assertNotEqual(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
+void assertNotEqual(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 		const string file = __FILE__, const int line = __LINE__)
 {
 	version(assert) {
 		alias CMP = getCMP!(T,cmpFloatNot, cmpNot);
-		return AssertImpl!(T,S, CMP, "!=")(toTest, toCompareAgainst, file,
+		AssertImpl!(CMP, "!=")(toTest, toCompareAgainst, file,
 				line
 		);
-	} else {
-		return toTest;
 	}
 }
 
 /// ditto
-auto ref T assertLess(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
+void assertLess(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 		const string file = __FILE__, const int line = __LINE__)
 {
 	version(assert) {
-		return AssertImpl!(T,S, cmpLess, "<")(toTest, toCompareAgainst,
+		return AssertImpl!(cmpLess, "<")(toTest, toCompareAgainst,
 				file, line
 		);
-	} else {
-		return toTest;
 	}
 }
 
 /// ditto
-auto ref T assertGreater(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
+void assertGreater(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 		const string file = __FILE__, const int line = __LINE__)
 {
 	version(assert) {
-		return AssertImpl!(T,S, cmpGreater, ">")(toTest, toCompareAgainst,
+		return AssertImpl!(cmpGreater, ">")(toTest, toCompareAgainst,
 				file, line
 		);
-	} else {
-		return toTest;
 	}
 }
 
 /// ditto
-auto ref T assertGreaterEqual(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
+void assertGreaterEqual(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 		const string file = __FILE__, const int line = __LINE__)
 {
 	version(assert) {
 		alias CMP = getCMP!(T,cmpGreaterEqualFloat, cmpGreaterEqual);
-		return AssertImpl!(T,S, CMP, ">=")(toTest,
+		return AssertImpl!(CMP, ">=")(toTest,
 				toCompareAgainst, file, line
 		);
-	} else {
-		return toTest;
 	}
 }
 
 /// ditto
-auto ref T assertLessEqual(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
+void assertLessEqual(T,S)(auto ref T toTest, auto ref S toCompareAgainst,
 		const string file = __FILE__, const int line = __LINE__)
 {
 	version(assert) {
 		alias CMP = getCMP!(T,cmpLessEqualFloat, cmpLessEqual);
-		return AssertImpl!(T,S, CMP, "<=")(toTest,
+		return AssertImpl!(CMP, "<=")(toTest,
 				toCompareAgainst, file, line
 		);
-	} else {
-		return toTest;
 	}
 }
 
-private auto ref T AssertImpl(T,S,alias Cmp, string cmpMsg)(auto ref T toTest,
+private void AssertImpl(alias Cmp, string cmpMsg,T,S)(auto ref T toTest,
 		auto ref S toCompareAgainst, const string file, const int line)
 {
 	import std.format : format;
@@ -170,7 +158,6 @@ private auto ref T AssertImpl(T,S,alias Cmp, string cmpMsg)(auto ref T toTest,
 
 	static assert(!isInputRange!T || isForwardRange!T);
 	version(exceptionhandling_release_asserts) {
-		return toTest;
 	} else {
 		bool cmpRslt = false;
 		try {
@@ -222,7 +209,6 @@ private auto ref T AssertImpl(T,S,alias Cmp, string cmpMsg)(auto ref T toTest,
 					line
 			);
 		}
-		return toTest;
 	}
 }
 
@@ -236,36 +222,32 @@ unittest {
 		T one = 1;
 		T two = 2;
 
-		T ret = assertEqual(one, one).assertGreater(zero).assertLess(two);
-		cast(void)assertEqual(ret, one);
-		ret = assertNotEqual(one, zero).assertGreater(zero).assertLess(two);
-		cast(void)assertEqual(ret, one);
-		ret = assertLessEqual(one, two)
-			.assertGreaterEqual(zero)
-			.assertEqual(one);
-		cast(void)assertEqual(ret, one);
+		assertEqual(one, one);
+		assertNotEqual(one, zero);
 
-		cast(void)assertEqual(cast(const(T))one, one);
-		cast(void)assertNotEqual(cast(const(T))one, zero);
-		cast(void)assertEqual(one, cast(const(T))one);
-		cast(void)assertNotEqual(one, cast(const(T))zero);
+		assertEqual(cast(const(T))one, one);
+		assertNotEqual(cast(const(T))one, zero);
+		assertEqual(one, cast(const(T))one);
+		assertNotEqual(one, cast(const(T))zero);
+		assertLessEqual(cast(const(T))zero, one);
+		assertGreaterEqual(one, cast(const(T))zero);
 
 		bool t = false;
 		try {
-			cast(void)assertEqual(one, zero);
+			assertEqual(one, zero);
 		} catch(Throwable e) {
 			t = true;
 		}
 		assert(t);
 	}
 
-	cast(void)assertEqual(1, 1);
-	cast(void)assertNotEqual(1, 0);
+	assertEqual(1, 1);
+	assertNotEqual(1, 0);
 }
 
 unittest {
 	import core.exception : AssertError;
-	import std.exception : assertThrown;
+	import std.exception : assertThrown, assertNotThrown;
 
 	class Foo {
 		int a;
