@@ -250,7 +250,13 @@ unittest {
 		cast(void)assertEqual(one, cast(const(T))one);
 		cast(void)assertNotEqual(one, cast(const(T))zero);
 
-		assertThrown!AssertError(assertEqual(one, zero));
+		bool t = false;
+		try {
+			cast(void)assertEqual(one, zero);
+		} catch(Throwable e) {
+			t = true;
+		}
+		assert(t);
 	}
 
 	cast(void)assertEqual(1, 1);
