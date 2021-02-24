@@ -14,13 +14,13 @@ private {
 		alias ExceptionType = Exception;
 	}
 
-	import std.math : approxEqual;
+	import std.math : isClose;
 	bool cmpFloat(T)(T tt, T tc) {
-		return approxEqual(tt, tc);
+		return isClose(tt, tc);
 	}
 
 	bool cmpFloatNot(T)(T tt, T tc) {
-		return !approxEqual(tt, tc);
+		return !isClose(tt, tc);
 	}
 
 	bool cmpNot(T,S)(T tt, S tc) {
@@ -48,11 +48,11 @@ private {
 	}
 
 	bool cmpLessEqualFloat(T)(T tt, T tc) {
-		return tt < tc || approxEqual(tt, tc);
+		return tt < tc || isClose(tt, tc);
 	}
 
 	bool cmpGreaterEqualFloat(T)(T tt, T tc) {
-		return tt > tc || approxEqual(tt, tc);
+		return tt > tc || isClose(tt, tc);
 	}
 }
 
@@ -76,7 +76,7 @@ template getCMP(T, alias FCMP, alias ICMP) {
 }
 
 /** Assert that `toTest` is equal to `toCompareAgainst`.
-If `T` is a floating point `approxEqual` is used to compare the values.
+If `T` is a floating point `isClose` is used to compare the values.
 `toTest` is returned if the comparision is correct.
 If the comparision is incorrect an Exception is thrown. If assertEqual is used
 in a unittest block an AssertError is thrown an Exception otherwise.
